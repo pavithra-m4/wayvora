@@ -1,56 +1,69 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import 'student_home_screen.dart';
+import '../widgets/wayvora_logo.dart';
 
 class StudentLoginScreen extends StatefulWidget {
   const StudentLoginScreen({super.key});
 
   @override
-  State<StudentLoginScreen> createState() =>
-      _StudentLoginScreenState();
+  State<StudentLoginScreen> createState() => _StudentLoginScreenState();
 }
 
-class _StudentLoginScreenState
-    extends State<StudentLoginScreen> {
+class _StudentLoginScreenState extends State<StudentLoginScreen> {
+  // ---------------- COLORS ----------------
+
+  static const Color navy = Color(0xFF132235);
+  static const Color yellow = Color(0xFFFFBE1B);
+  static const Color cream = Color(0xFFFFFBF2);
+  static const Color lightYellow = Color(0xFFFFF3CF);
+  static const Color grey = Color(0xFF707070);
+
+  // ---------------- CONTROLLERS ----------------
+
   final TextEditingController registrationController =
       TextEditingController();
 
-  final TextEditingController dobController =
-      TextEditingController();
+  final TextEditingController dobController = TextEditingController();
 
-  final FocusNode registrationFocus = FocusNode();
-  final FocusNode dobFocus = FocusNode();
+  // ---------------- STATE ----------------
 
-  bool obscurePassword = true;
+  bool obscureDob = true;
   bool isLoading = false;
 
-  static const Color navy = Color(0xFF142333);
-  static const Color yellow = Color(0xFFFFBE1B);
-  static const Color cream = Color(0xFFFFF8E8);
-  static const Color softYellow = Color(0xFFFFF2C9);
-  static const Color grey = Color(0xFF707070);
+  @override
+  void initState() {
+    super.initState();
+
+    dobController.addListener(_formatDateOfBirth);
+  }
 
   @override
   void dispose() {
     registrationController.dispose();
+    dobController.removeListener(_formatDateOfBirth);
     dobController.dispose();
-    registrationFocus.dispose();
-    dobFocus.dispose();
     super.dispose();
   }
 
-  // ==========================================================================
-  // DOB FORMATTER
+  // ---------------- AUTO DATE FORMAT ----------------
   //
-  // User types:
+  // User enters:
   // 04022008
   //
-  // Automatically becomes:
+  // App automatically changes it to:
   // 04/02/2008
-  // ==========================================================================
+  //
 
-  void _formatDob(String value) {
-    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+  void _formatDateOfBirth() {
+    final text = dobController.text;
+
+    String digits = text.replaceAll('/', '');
+
+    if (digits.length > 8) {
+      digits = digits.substring(0, 8);
+    }
 
     String formatted = '';
 
@@ -60,16 +73,11 @@ class _StudentLoginScreenState
       formatted =
           '${digits.substring(0, 2)}/${digits.substring(2)}';
     } else {
-      final yearLength =
-          digits.length > 8 ? 8 : digits.length;
-
       formatted =
-          '${digits.substring(0, 2)}/'
-          '${digits.substring(2, 4)}/'
-          '${digits.substring(4, yearLength)}';
+          '${digits.substring(0, 2)}/${digits.substring(2, 4)}/${digits.substring(4)}';
     }
 
-    if (formatted != dobController.text) {
+    if (formatted != text) {
       dobController.value = TextEditingValue(
         text: formatted,
         selection: TextSelection.collapsed(
@@ -79,33 +87,25 @@ class _StudentLoginScreenState
     }
   }
 
-  // ==========================================================================
-  // LOGIN
-  // ==========================================================================
+  // ---------------- LOGIN ----------------
 
-  Future<void> _login() async {
+  void _login() {
     FocusScope.of(context).unfocus();
 
-    final registration =
-        registrationController.text.trim();
+    final registrationNumber =
+        registrationController.text.trim().toUpperCase();
 
     final dob = dobController.text.trim();
 
-    if (registration.isEmpty) {
-      _showError('Please enter your registration number.');
+    // Basic validation
+    if (registrationNumber.isEmpty) {
+      _showMessage('Please enter your registration number.');
       return;
     }
 
-    if (dob.isEmpty) {
-      _showError('Please enter your date of birth.');
-      return;
-    }
-
-    if (!RegExp(
-      r'^\d{2}/\d{2}/\d{4}$',
-    ).hasMatch(dob)) {
-      _showError(
-        'Enter your date of birth in DD/MM/YYYY format.',
+    if (dob.length != 10) {
+      _showMessage(
+        'Please enter your date of birth in DD/MM/YYYY format.',
       );
       return;
     }
@@ -114,557 +114,455 @@ class _StudentLoginScreenState
       isLoading = true;
     });
 
-    // ------------------------------------------------------------------------
-    // TEMPORARY
-    // Later we will replace this with the college database verification.
-    // ------------------------------------------------------------------------
+    // Small delay to make the login feel natural.
+    Future.delayed(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
 
-    await Future.delayed(
-      const Duration(milliseconds: 800),
-    );
+      setState(() {
+        isLoading = false;
+      });
 
-    if (!mounted) return;
+      // ------------------------------------------------
+      // TEMPORARY LOGIN FOR DEVELOPMENT
+      // ------------------------------------------------
+      //
+      // Later this section will be replaced with:
+      //
+      // Registration Number + DOB
+      //          ↓
+      // College Database / API
+      //          ↓
+      // Verification
+      //
+      // ------------------------------------------------
 
-    setState(() {
-      isLoading = false;
+      if (registrationNumber == '711725UIT207' &&
+          dob == '04/02/2008') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const StudentHomeScreen(),
+          ),
+        );
+      } else {
+        _showMessage(
+          'Invalid registration number or date of birth.',
+        );
+      }
     });
+  }
+
+  // ---------------- MESSAGE ----------------
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Login details received. Database verification will be connected next.',
-          style: GoogleFonts.outfit(
+          message,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
         ),
         backgroundColor: navy,
         behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(18),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
       ),
     );
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        backgroundColor: const Color(0xFF142333),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
+  // ---------------- UI ----------------
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFCF5),
-      resizeToAvoidBottomInset: true,
-
+      backgroundColor: cream,
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              keyboardDismissBehavior:
-                  ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.only(bottom: 35),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(28, 30, 28, 35),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
 
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  // ==========================================================
-                  // TOP BRAND HEADER
-                  // ==========================================================
+              // ---------------- TOP BRAND ----------------
 
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(
-                      28,
-                      25,
-                      28,
-                      30,
-                    ),
-                    decoration: const BoxDecoration(
-                      color: cream,
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(65),
-                        bottomRight: Radius.circular(65),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(
+                  24,
+                  22,
+                  24,
+                  25,
+                ),
+                decoration: const BoxDecoration(
+                  color: lightYellow,
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(45),
+                    bottomRight: Radius.circular(45),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 55,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: yellow,
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
 
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                    const SizedBox(height: 20),
 
-                      children: [
-                        Container(
-                          width: 105,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: yellow,
-                            borderRadius:
-                                BorderRadius.circular(20),
-                          ),
-                        ),
+                    const WayvoraLogo(
+  fontSize: 42,
+  showTagline: true,
+),
+                    const SizedBox(height: 2),
 
-                        const SizedBox(height: 18),
+                    Text(
+                      'CAMPUS ON THE MOVE',
+                      style: GoogleFonts.poppins(
+                        color: grey,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
-                        RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'Way',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 43,
-                                  fontWeight: FontWeight.w800,
-                                  color: navy,
-                                  letterSpacing: -1.5,
-                                ),
-                              ),
-                              TextSpan(
-                                text: 'vora',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 43,
-                                  fontWeight: FontWeight.w800,
-                                  color: yellow,
-                                  letterSpacing: -1.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+              const SizedBox(height: 38),
 
-                        const SizedBox(height: 4),
+              // ---------------- TITLE ----------------
 
-                        Text(
-                          'CAMPUS ON THE MOVE',
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: grey,
-                            letterSpacing: 3.2,
-                          ),
-                        ),
-                      ],
+              Text(
+                'Student Login',
+                style: GoogleFonts.poppins(
+                  color: navy,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1,
+                ),
+              ),
+
+              const SizedBox(height: 7),
+
+              Text(
+                'Welcome back! Login to continue your journey.',
+                style: GoogleFonts.poppins(
+                  color: grey,
+                  fontSize: 16,
+                  height: 1.5,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+
+              const SizedBox(height: 35),
+
+              // ---------------- REGISTRATION NUMBER ----------------
+
+              Text(
+                'Registration Number',
+                style: GoogleFonts.poppins(
+                  color: navy,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              TextField(
+                controller: registrationController,
+                textCapitalization: TextCapitalization.characters,
+                style: GoogleFonts.poppins(
+                  color: navy,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Enter registration number',
+                  hintStyle: GoogleFonts.poppins(
+                    color: Colors.grey.shade400,
+                    fontSize: 15,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.badge_outlined,
+                    color: yellow,
+                    size: 28,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 20,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(22),
+                    borderSide: BorderSide(
+                      color: yellow.withOpacity(0.30),
+                      width: 1.5,
                     ),
                   ),
-
-                  // ==========================================================
-                  // LOGIN CONTENT
-                  // ==========================================================
-
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      28,
-                      38,
-                      28,
-                      0,
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(22),
+                    borderSide: const BorderSide(
+                      color: yellow,
+                      width: 2,
                     ),
+                  ),
+                ),
+              ),
 
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+              const SizedBox(height: 27),
 
-                      children: [
-                        // Back button
-                        GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.arrow_back_rounded,
-                                color: navy,
-                                size: 22,
-                              ),
-                              const SizedBox(width: 7),
-                              Text(
-                                'Back',
-                                style: GoogleFonts.outfit(
-                                  color: navy,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+              // ---------------- DOB ----------------
 
-                        const SizedBox(height: 28),
+              Text(
+                'Date of Birth',
+                style: GoogleFonts.poppins(
+                  color: navy,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
 
-                        Text(
-                          'Student Login',
-                          style: GoogleFonts.outfit(
-                            fontSize: 35,
-                            fontWeight: FontWeight.w800,
-                            color: navy,
-                            letterSpacing: -0.8,
-                          ),
-                        ),
+              const SizedBox(height: 10),
 
-                        const SizedBox(height: 7),
+              TextField(
+                controller: dobController,
+                keyboardType: TextInputType.number,
+                obscureText: obscureDob,
+                maxLength: 10,
+                style: GoogleFonts.poppins(
+                  color: navy,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 1,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'DD/MM/YYYY',
+                  hintStyle: GoogleFonts.poppins(
+                    color: Colors.grey.shade400,
+                    fontSize: 15,
+                  ),
+                  counterText: '',
+                  prefixIcon: const Icon(
+                    Icons.lock_outline,
+                    color: yellow,
+                    size: 27,
+                  ),
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      setState(() {
+                        obscureDob = !obscureDob;
+                      });
+                    },
+                    icon: Icon(
+                      obscureDob
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 20,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(22),
+                    borderSide: BorderSide(
+                      color: yellow.withOpacity(0.30),
+                      width: 1.5,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(22),
+                    borderSide: const BorderSide(
+                      color: yellow,
+                      width: 2,
+                    ),
+                  ),
+                ),
+              ),
 
-                        Text(
-                          'Welcome back! Login to continue your journey.',
-                          style: GoogleFonts.outfit(
-                            fontSize: 17,
-                            height: 1.35,
-                            color: grey,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
+              const SizedBox(height: 12),
 
-                        const SizedBox(height: 35),
+              // ---------------- DOB INFO ----------------
 
-                        // ====================================================
-                        // REGISTRATION NUMBER
-                        // ====================================================
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    color: yellow,
+                    size: 20,
+                  ),
 
-                        _fieldLabel(
-                          'Registration Number',
-                        ),
+                  const SizedBox(width: 9),
 
-                        const SizedBox(height: 9),
-
-                        TextField(
-                          controller:
-                              registrationController,
-                          focusNode: registrationFocus,
-                          textCapitalization:
-                              TextCapitalization.characters,
-                          keyboardType:
-                              TextInputType.text,
-                          textInputAction:
-                              TextInputAction.next,
-                          onSubmitted: (_) {
-                            dobFocus.requestFocus();
-                          },
-                          style: GoogleFonts.outfit(
-                            fontSize: 18,
-                            color: navy,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          decoration: _inputDecoration(
-                            icon: Icons.badge_outlined,
-                            hint: 'Enter registration number',
-                          ),
-                        ),
-
-                        const SizedBox(height: 27),
-
-                        // ====================================================
-                        // DATE OF BIRTH
-                        // ====================================================
-
-                        _fieldLabel(
-                          'Date of Birth',
-                        ),
-
-                        const SizedBox(height: 9),
-
-                        TextField(
-                          controller: dobController,
-                          focusNode: dobFocus,
-                          keyboardType:
-                              TextInputType.number,
-                          textInputAction:
-                              TextInputAction.done,
-                          obscureText: obscurePassword,
-
-                          // IMPORTANT:
-                          // This automatically inserts /
-                          // after DD and MM.
-                          onChanged: _formatDob,
-
-                          inputFormatters: [
-                            FilteringTextInputFormatter
-                                .digitsOnly,
-                            LengthLimitingTextInputFormatter(
-                              8,
-                            ),
-                          ],
-
-                          style: GoogleFonts.outfit(
-                            fontSize: 18,
-                            color: navy,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 1,
-                          ),
-
-                          decoration: _inputDecoration(
-                            icon: Icons.lock_outline_rounded,
-                            hint: 'DD/MM/YYYY',
-                          ).copyWith(
-                            suffixIcon: IconButton(
-                              onPressed: () {
-                                setState(() {
-                                  obscurePassword =
-                                      !obscurePassword;
-                                });
-                              },
-                              icon: Icon(
-                                obscurePassword
-                                    ? Icons
-                                        .visibility_outlined
-                                    : Icons
-                                        .visibility_off_outlined,
-                                color: grey,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 10),
-
-                        // Helpful instruction
-                        Row(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.info_outline_rounded,
-                              size: 17,
-                              color: yellow,
-                            ),
-                            const SizedBox(width: 7),
-                            Expanded(
-                              child: Text(
-                                'Enter your date of birth using numbers only. '
-                                'The app will automatically add / '
-                                'in DD/MM/YYYY format.',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 13,
-                                  height: 1.35,
-                                  color: grey,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 30),
-
-                        // ====================================================
-                        // LOGIN BUTTON
-                        // ====================================================
-
-                        SizedBox(
-                          width: double.infinity,
-                          height: 58,
-                          child: ElevatedButton(
-                            onPressed:
-                                isLoading ? null : _login,
-
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: yellow,
-                              foregroundColor: navy,
-                              disabledBackgroundColor:
-                                  yellow.withOpacity(0.55),
-                              elevation: 0,
-                              shape:
-                                  RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(18),
-                              ),
-                            ),
-
-                            child: isLoading
-                                ? const SizedBox(
-                                    width: 23,
-                                    height: 23,
-                                    child:
-                                        CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      color: navy,
-                                    ),
-                                  )
-                                : Text(
-                                    'LOGIN',
-                                    style:
-                                        GoogleFonts.outfit(
-                                      fontSize: 18,
-                                      fontWeight:
-                                          FontWeight.w800,
-                                      letterSpacing: 1,
-                                    ),
-                                  ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 32),
-
-                        // ====================================================
-                        // INFO CARD
-                        // ====================================================
-
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: cream,
-                            borderRadius:
-                                BorderRadius.circular(20),
-                            border: Border.all(
-                              color: yellow.withOpacity(0.35),
-                            ),
-                          ),
-                          child: Row(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: 42,
-                                height: 42,
-                                decoration:
-                                    const BoxDecoration(
-                                  color: yellow,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.security_rounded,
-                                  color: navy,
-                                  size: 22,
-                                ),
-                              ),
-
-                              const SizedBox(width: 13),
-
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Secure Student Access',
-                                      style:
-                                          GoogleFonts.outfit(
-                                        fontSize: 15,
-                                        fontWeight:
-                                            FontWeight.w700,
-                                        color: navy,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      'Your registration number and date of birth '
-                                      'will be verified with the college database.',
-                                      style:
-                                          GoogleFonts.outfit(
-                                        fontSize: 12.5,
-                                        height: 1.35,
-                                        color: grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 38),
-
-                        // FOOTER
-                        Center(
-                          child: Column(
-                            children: [
-                              Container(
-                                width: 75,
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color: yellow,
-                                  borderRadius:
-                                      BorderRadius.circular(20),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Campus on the move',
-                                style:
-                                    GoogleFonts.outfit(
-                                  fontSize: 14,
-                                  color: grey,
-                                  letterSpacing: 1.5,
-                                  fontWeight:
-                                      FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                  Expanded(
+                    child: Text(
+                      'Enter your date of birth using numbers only. '
+                      'The app will automatically add / in DD/MM/YYYY format.',
+                      style: GoogleFonts.poppins(
+                        color: grey,
+                        fontSize: 13,
+                        height: 1.5,
+                      ),
                     ),
                   ),
                 ],
               ),
-            );
-          },
-        ),
-      ),
-    );
-  }
 
-  // ==========================================================================
-  // FIELD LABEL
-  // ==========================================================================
+              const SizedBox(height: 30),
 
-  Widget _fieldLabel(String text) {
-    return Text(
-      text,
-      style: GoogleFonts.outfit(
-        fontSize: 17,
-        fontWeight: FontWeight.w700,
-        color: navy,
-      ),
-    );
-  }
+              // ---------------- LOGIN BUTTON ----------------
 
-  // ==========================================================================
-  // INPUT DECORATION
-  // ==========================================================================
+              SizedBox(
+                width: double.infinity,
+                height: 62,
+                child: ElevatedButton(
+                  onPressed: isLoading ? null : _login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: yellow,
+                    foregroundColor: navy,
+                    disabledBackgroundColor:
+                        yellow.withOpacity(0.55),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 25,
+                          height: 25,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: navy,
+                          ),
+                        )
+                      : Text(
+                          'LOGIN',
+                          style: GoogleFonts.poppins(
+                            color: navy,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                ),
+              ),
 
-  InputDecoration _inputDecoration({
-    required IconData icon,
-    required String hint,
-  }) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: GoogleFonts.outfit(
-        color: const Color(0xFF9B9B9B),
-        fontSize: 16,
-      ),
+              const SizedBox(height: 28),
 
-      prefixIcon: Icon(
-        icon,
-        color: yellow,
-        size: 25,
-      ),
+              // ---------------- SECURITY CARD ----------------
 
-      filled: true,
-      fillColor: Colors.white,
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E6),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: yellow.withOpacity(0.35),
+                    width: 1.2,
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
 
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 18,
-        vertical: 17,
-      ),
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: const BoxDecoration(
+                        color: yellow,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.shield_outlined,
+                        color: navy,
+                        size: 27,
+                      ),
+                    ),
 
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(18),
-        borderSide: BorderSide(
-          color: yellow.withOpacity(0.28),
-          width: 1.5,
-        ),
-      ),
+                    const SizedBox(width: 15),
 
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(
-          color: yellow,
-          width: 2,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Secure Student Access',
+                            style: GoogleFonts.poppins(
+                              color: navy,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+
+                          const SizedBox(height: 5),
+
+                          Text(
+                            'Your registration number and date of birth '
+                            'will be verified with the college database.',
+                            style: GoogleFonts.poppins(
+                              color: grey,
+                              fontSize: 12.5,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // ---------------- FOOTER ----------------
+
+              Center(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 55,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: yellow,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    Text(
+                      'Campus on the move',
+                      style: GoogleFonts.poppins(
+                        color: grey,
+                        fontSize: 14,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

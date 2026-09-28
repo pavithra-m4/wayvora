@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'screens/role_selection_screen.dart';
-
+import 'theme/app_theme.dart';
+import 'widgets/wayvora_logo.dart';
 void main() {
   runApp(const WayvoraApp());
 }
@@ -13,36 +14,12 @@ class WayvoraApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+
       title: 'Wayvora',
 
-      theme: ThemeData(
-        useMaterial3: true,
-        fontFamily: 'Arial',
-
-        scaffoldBackgroundColor: const Color(0xFFFFFCF3),
-
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFFC928),
-          brightness: Brightness.light,
-        ),
-
-        textTheme: const TextTheme(
-          headlineLarge: TextStyle(
-            fontSize: 42,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF17202A),
-          ),
-          headlineMedium: TextStyle(
-            fontSize: 30,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF17202A),
-          ),
-          bodyLarge: TextStyle(
-            fontSize: 18,
-            color: Color(0xFF666666),
-          ),
-        ),
-      ),
+      // WAYVORA GLOBAL THEME
+      // This replaces the old ThemeData(...) block.
+      theme: AppTheme.theme,
 
       home: const WelcomeScreen(),
     );
@@ -55,7 +32,7 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFCF3),
+      backgroundColor: AppTheme.background,
 
       body: SafeArea(
         child: LayoutBuilder(
@@ -71,15 +48,9 @@ class WelcomeScreen extends StatelessWidget {
                   // ---------------- LOGO ----------------
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Wayvora',
-                      style: const TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF17202A),
-                        letterSpacing: -1,
-                      ),
-                    ),
+                    child: const WayvoraLogo(
+  fontSize: 40,
+),
                   ),
 
                   const Spacer(),
@@ -89,38 +60,52 @@ class WelcomeScreen extends StatelessWidget {
                     width: 120,
                     height: 120,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF1C2),
+                      color: AppTheme.lightYellow,
                       borderRadius: BorderRadius.circular(32),
                     ),
                     child: const Icon(
                       Icons.directions_bus_rounded,
                       size: 62,
-                      color: Color(0xFFFFB800),
+                      color: AppTheme.yellow,
                     ),
                   ),
 
                   const SizedBox(height: 45),
 
                   // ---------------- TITLE ----------------
-                  const Text(
-                    'Welcome to Wayvora',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 42,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF17202A),
-                      letterSpacing: -1,
-                    ),
-                  ),
+                  Column(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    const Text(
+      'Welcome to',
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        fontSize: 42,
+        fontWeight: FontWeight.w700,
+        color: Color(0xFF17202A),
+        letterSpacing: -1,
+      ),
+    ),
+
+    const SizedBox(height: 4),
+
+    const WayvoraLogo(
+      fontSize: 42,
+    ),
+  ],
+),
 
                   const SizedBox(height: 14),
 
-                  const Text(
+                  // ---------------- SUBTITLE ----------------
+                  Text(
                     'Your campus travel, made simpler.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
+                      fontFamily: 'Poppins',
                       fontSize: 20,
-                      color: Color(0xFF777777),
+                      fontWeight: FontWeight.w400,
+                      color: AppTheme.grey,
                     ),
                   ),
 
@@ -141,23 +126,8 @@ class WelcomeScreen extends StatelessWidget {
                         );
                       },
 
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFFC928),
-                        foregroundColor: const Color(0xFF17202A),
-
-                        elevation: 0,
-
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                      ),
-
                       child: const Text(
                         'Get Started',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                        ),
                       ),
                     ),
                   ),
@@ -165,11 +135,13 @@ class WelcomeScreen extends StatelessWidget {
                   const SizedBox(height: 28),
 
                   // ---------------- FOOTER ----------------
-                  const Text(
+                  Text(
                     'Smart College Mobility',
                     style: TextStyle(
+                      fontFamily: 'Poppins',
                       fontSize: 16,
-                      color: Color(0xFF999999),
+                      fontWeight: FontWeight.w400,
+                      color: AppTheme.grey,
                       letterSpacing: 0.5,
                     ),
                   ),
